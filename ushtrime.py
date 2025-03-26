@@ -1,19 +1,3 @@
-"""
-Problem Approach:
-Basic Greedy Caching with First-Fit Strategy
-
-Key Characteristics:
-1. Greedy Heuristic:
-   - Processes videos in original order (0 → V-1)
-   - Places each video in first cache with sufficient space
-   - Never revisits previous placement decisions
-
-2. Validation Focus:
-   - Ensures cache capacity constraints (X=100MB)
-   - Validates output format requirements
-   - Checks for duplicate video placements (bonus safety)
-"""
-
 def main():
     V = 5  # Number of videos
     E = 2  # Number of endpoints
@@ -46,31 +30,31 @@ def main():
     # Distribute videos using first-fit algorithm
     for vid in sorted_videos:
         placed = False
-        print(f"Trying to place Video {vid} (size {video_sizes[vid]}MB)...")
+        print(f"\nAttempting to place Video {vid} (size {video_sizes[vid]}MB)...")
         for cache_id in range(C):
             if video_sizes[vid] <= cache_servers[cache_id]['remaining_capacity']:
-                print(f"  Placing Video {vid} in Cache {cache_id} (remaining capacity {cache_servers[cache_id]['remaining_capacity']}MB)")
+                print(f"  Video {vid} can be placed in Cache {cache_id}: Remaining capacity = {cache_servers[cache_id]['remaining_capacity']}MB")
+                print(f"  Placing Video {vid} in Cache {cache_id}...")
                 cache_servers[cache_id]['videos'].add(vid)
                 cache_servers[cache_id]['remaining_capacity'] -= video_sizes[vid]
-                placed = True
                 print(f"  After placing Video {vid}: Cache {cache_id} remaining capacity {cache_servers[cache_id]['remaining_capacity']}MB")
+                placed = True
                 break
         if not placed:
             print(f"Warning: Video {vid} (size {video_sizes[vid]}MB) could not be stored in any cache due to insufficient capacity!")
 
     # Generate output in required format
     submission = []
+    print("\nFinal cache states:")
     for cache_id, cache in enumerate(cache_servers):
         if cache['videos']:
             # Convert video IDs to sorted list for consistent output
             sorted_vids = sorted(cache['videos'])
             submission.append(f"{cache_id} {' '.join(map(str, sorted_vids))}")
-            # Convert video IDs to sorted list for consistent output
-            sorted_vids = sorted(cache['videos'])
-            submission.append(f"{cache_id} {' '.join(map(str, sorted_vids))}")
+            print(f"  Cache {cache_id}: Stored Videos {sorted_vids}, Remaining Capacity: {cache['remaining_capacity']}MB")
 
     # Print submission (header + cache lines)
-    print(len(submission))
+    print(f"\nTotal number of caches used: {len(submission)}")
     for line in submission:
         print(line)
 
@@ -78,6 +62,7 @@ def main():
     def validate_solution():
         valid = True
 
+        print("\nRunning validation checks...")
         # Check 1: Verify cache capacity constraints
         for cid, cache in enumerate(cache_servers):
             total_size = sum(video_sizes[vid] for vid in cache['videos'])
