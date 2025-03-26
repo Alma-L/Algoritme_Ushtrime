@@ -54,7 +54,7 @@ def main():
                 placed = True
                 break
         if not placed:
-            print(f"Warning: Video {vid} (size {video_sizes[vid]}MB) could not be stored in any cache!")
+            print(f"Warning: Video Indexed {vid} (size {video_sizes[vid]}MB) could not be stored in any cache!")
 
     # Generate output in required format
     submission = []
@@ -79,6 +79,31 @@ def main():
             if total_size > X:
                 print(f"Validation Error: Cache {cid} exceeds capacity ({total_size}/{X}MB)")
                 valid = False
+        
+        # Check 2: Verify video uniqueness across caches
+        all_videos = set()
+        for cache in cache_servers:
+            for vid in cache['videos']:
+                if vid in all_videos:
+                    print(f"Validation Error: Video {vid} appears in multiple caches")
+                    valid = False
+                all_videos.add(vid)
+
+        # Check 3: Verify output format
+        try:
+            for line in submission:
+                parts = line.split()
+                cache_id = int(parts[0])
+                videos = list(map(int, parts[1:]))
+                
+                # Check video IDs are valid
+                for vid in videos:
+                    if vid < 0 or vid >= V:
+                        print(f"Validation Error: Invalid video ID {vid} in cache {cache_id}")
+                        valid = False
+        except ValueError:
+            print("Validation Error: Non-integer values in output")
+            valid = False
         
         if valid:
             print("Validation Successful: All constraints satisfied")
