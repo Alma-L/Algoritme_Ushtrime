@@ -6,7 +6,7 @@ def main():
     X = 100  # Capacity of each cache server (MB)
 
     # Video sizes
-    video_sizes = [50, 50, 80, 30, 150]  # Video 4 now exceeds cache capacity
+    video_sizes = [50, -50, 80, 30, 150]  # Video 4 now exceeds cache capacity
 
     # Endpoints and requests (not used in this specific example)
     endpoints = [
@@ -63,14 +63,22 @@ def main():
         valid = True
 
         print("\nRunning validation checks...")
-        # Check 1: Verify cache capacity constraints
+        # Check 1: Verify video sizes and cache capacity constraints
+        if any(v < 0 for v in video_sizes):
+            print("Validation Error: Negative video size found.")
+            valid = False
+        if any(cache['remaining_capacity'] < 0 for cache in cache_servers):
+            print("Validation Error: Cache remaining capacity is negative.")
+            valid = False
+
+        # Check 2: Verify cache capacity constraints
         for cid, cache in enumerate(cache_servers):
             total_size = sum(video_sizes[vid] for vid in cache['videos'])
             if total_size > X:
                 print(f"Validation Error: Cache {cid} exceeds capacity. Total size: {total_size}/{X}MB")
                 valid = False
-        
-        # Check 2: Verify video uniqueness across caches
+
+        # Check 3: Verify video uniqueness across caches
         all_videos = set()
         for cache in cache_servers:
             for vid in cache['videos']:
@@ -79,7 +87,7 @@ def main():
                     valid = False
                 all_videos.add(vid)
 
-        # Check 3: Verify output format
+        # Check 4: Check for invalid video IDs and duplicates in the submission
         try:
             for line in submission:
                 parts = line.split()
@@ -91,6 +99,11 @@ def main():
                     if vid < 0 or vid >= V:
                         print(f"Validation Error: Invalid video ID {vid} in cache {cache_id}")
                         valid = False
+
+                # Check for duplicate video IDs in the same cache
+                if len(videos) != len(set(videos)):
+                    print(f"Validation Error: Duplicate video IDs found in cache {cache_id}")
+                    valid = False
         except ValueError:
             print("Validation Error: Non-integer values in output")
             valid = False
