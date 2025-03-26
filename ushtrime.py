@@ -1,3 +1,19 @@
+"""
+Problem Approach:
+Basic Greedy Caching with First-Fit Strategy
+
+Key Characteristics:
+1. Greedy Heuristic:
+   - Processes videos in original order (0 → V-1)
+   - Places each video in first cache with sufficient space
+   - Never revisits previous placement decisions
+
+2. Validation Focus:
+   - Ensures cache capacity constraints (X=100MB)
+   - Validates output format requirements
+   - Checks for duplicate video placements (bonus safety)
+"""
+
 def main():
     V = 5  # Number of videos
     E = 2  # Number of endpoints
@@ -46,6 +62,9 @@ def main():
     submission = []
     for cache_id, cache in enumerate(cache_servers):
         if cache['videos']:
+            # Convert video IDs to sorted list for consistent output
+            sorted_vids = sorted(cache['videos'])
+            submission.append(f"{cache_id} {' '.join(map(str, sorted_vids))}")
             # Convert video IDs to sorted list for consistent output
             sorted_vids = sorted(cache['videos'])
             submission.append(f"{cache_id} {' '.join(map(str, sorted_vids))}")
