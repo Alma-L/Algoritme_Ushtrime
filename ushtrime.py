@@ -97,63 +97,69 @@ def calculate_score(cache_servers, endpoints, requests):
         return 0
     return (total_time_saved_ms * 1000) // total_requests
 
+
 def main():
-    # Configuration - kept as original
-    V = 5  # Number of videos
-    E = 2  # Number of endpoints
-    R = 4  # Number of request descriptions
-    C = 3  # Number of cache servers
-    X = 100  # Capacity of each cache server (MB)
+    input_path = "trending_today.in"
+    output_path = "output.txt"
 
-    video_sizes = [50, -50, 80, 30, 150]  # Video 4 exceeds cache capacity
-    endpoints = [
-        {'data_center_latency': 1000, 'cache_latencies': {0: 100, 2: 200, 1: 300}},
-        {'data_center_latency': 500, 'cache_latencies': {}}
-    ]
-    requests = [
-        (3, 0, 1500),
-        (0, 1, 1000),
-        (4, 0, 500),
-        (1, 0, 1000)
-    ]
+    # Read input
+    with open(input_path, "r") as f:
+        V, E, R, C, X = map(int, f.readline().split())
+        video_sizes = list(map(int, f.readline().split()))
 
-    # Initialize cache servers
+        endpoints = []
+        for _ in range(E):
+            datacenter_latency, num_caches = map(int, f.readline().split())
+            cache_latencies = {}
+            for _ in range(num_caches):
+                cache_id, latency = map(int, f.readline().split())
+                cache_latencies[cache_id] = latency
+            endpoints.append({
+                'data_center_latency': datacenter_latency,
+                'cache_latencies': cache_latencies
+            })
+
+        requests = []
+        for _ in range(R):
+            vid, endpoint_id, num_requests = map(int, f.readline().split())
+            requests.append((vid, endpoint_id, num_requests))
+
+    # Initialize caches
     cache_servers = [{'videos': set(), 'remaining_capacity': X} for _ in range(C)]
 
-    # Video distribution logic
+    # Greedy First-Fit Video Placement
     sorted_videos = sorted(range(V), key=lambda v: video_sizes[v])
     for vid in sorted_videos:
-        placed = False
-        print(f"\nAttempting to place Video {vid} (size {video_sizes[vid]}MB)...")
         for cache_id in range(C):
             if video_sizes[vid] <= cache_servers[cache_id]['remaining_capacity']:
-                print(f"  Video {vid} can be placed in Cache {cache_id}: Remaining capacity = {cache_servers[cache_id]['remaining_capacity']}MB")
-                print(f"  Placing Video {vid} in Cache {cache_id}...")
                 cache_servers[cache_id]['videos'].add(vid)
                 cache_servers[cache_id]['remaining_capacity'] -= video_sizes[vid]
-                print(f"  After placing Video {vid}: Cache {cache_id} remaining capacity {cache_servers[cache_id]['remaining_capacity']}MB")
-                placed = True
                 break
-        if not placed:
-            print(f"Warning: Video {vid} (size {video_sizes[vid]}MB) could not be stored in any cache!")
 
-    # Generate output
-    submission = []
-    print("\nFinal cache states:")
-    for cache_id, cache in enumerate(cache_servers):
-        if cache['videos']:
-            sorted_vids = sorted(cache['videos'])
-            submission.append(f"{cache_id} {' '.join(map(str, sorted_vids))}")
-            print(f"  Cache {cache_id}: Stored Videos {sorted_vids}, Remaining Capacity: {cache['remaining_capacity']}MB")
+    # Validate solution
+    is_valid = validate_solution(cache_servers, video_sizes, X, V)
+    print("Validation Successful." if is_valid else "Validation Failed.")
 
-    print(f"\nTotal number of caches used: {len(submission)}")
-    for line in submission:
-        print(line)
+    if not is_valid:
+        return
 
-    # Validation and scoring
-    validate_solution(cache_servers, video_sizes, X, V)
+    # Calculate and print score
     score = calculate_score(cache_servers, endpoints, requests)
-    print(f"\nCalculated Score: {score}")
+    print(f"Final Score: {score}")
+
+    # Generate and write submission to output.txt
+    with open(output_path, "w") as f:
+        lines = []
+        for cache_id, cache in enumerate(cache_servers):
+            if cache['videos']:
+                sorted_vids = sorted(cache['videos'])
+                line = f"{cache_id} {' '.join(map(str, sorted_vids))}"
+                lines.append(line)
+        f.write(f"{len(lines)}\n")
+        f.write("\n".join(lines))
+
+
+
 
 if __name__ == "__main__":
     main()
