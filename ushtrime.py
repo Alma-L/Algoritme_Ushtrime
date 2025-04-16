@@ -1,4 +1,4 @@
-
+import os
 """
 Problem Approach:
 Basic Greedy Caching with First-Fit Strategy
@@ -74,35 +74,29 @@ def validate_solution(cache_servers, video_sizes, X, V):
         print("Validation Successful: All constraints satisfied")
     return valid
 
-def calculate_score(cache_servers, endpoints, requests):
-    total_time_saved_ms = 0
-    total_requests = sum(rn for (_, _, rn) in requests)
-    
-    for Rv, Re, Rn in requests:
-        endpoint = endpoints[Re]
-        LD = endpoint['data_center_latency']
-        connected_caches = endpoint['cache_latencies'].keys()
-        
-        min_latency = LD
-        for cache_id in connected_caches:
-            if Rv in cache_servers[cache_id]['videos']:
-                Lc = endpoint['cache_latencies'][cache_id]
-                if Lc < min_latency:
-                    min_latency = Lc
-        
-        time_saved = max(LD - min_latency, 0) * Rn
-        total_time_saved_ms += time_saved
-    
+def calculate_score(requests, endpoints, cache_servers, video_sizes):
+    total_saved_time = 0
+    total_requests = 0
+
+    for vid, endpoint_id, num_requests in requests:
+        total_requests += num_requests
+        endpoint = endpoints[endpoint_id]
+        dc_latency = endpoint['data_center_latency']
+        best_latency = dc_latency
+
+        for cache_id, cache_latency in endpoint['cache_latencies'].items():
+            if vid in cache_servers[cache_id]['videos']:
+                best_latency = min(best_latency, cache_latency)
+
+        saved = dc_latency - best_latency
+        total_saved_time += saved * num_requests
+
     if total_requests == 0:
         return 0
-    return (total_time_saved_ms * 1000) // total_requests
 
+    return (total_saved_time * 1000) // total_requests
 
-def main():
-    input_path = "trending_today.in"
-    output_path = "output.txt"
-
-    # Read input
+def process_file(input_path):
     with open(input_path, "r") as f:
         V, E, R, C, X = map(int, f.readline().split())
         video_sizes = list(map(int, f.readline().split()))
@@ -126,9 +120,8 @@ def main():
 
     # Initialize caches
     cache_servers = [{'videos': set(), 'remaining_capacity': X} for _ in range(C)]
-
-    # Greedy First-Fit Video Placement
     sorted_videos = sorted(range(V), key=lambda v: video_sizes[v])
+
     for vid in sorted_videos:
         for cache_id in range(C):
             if video_sizes[vid] <= cache_servers[cache_id]['remaining_capacity']:
@@ -136,6 +129,24 @@ def main():
                 cache_servers[cache_id]['remaining_capacity'] -= video_sizes[vid]
                 break
 
+    # Generate submission
+    submission = []
+    for cache_id, cache in enumerate(cache_servers):
+        if cache['videos']:
+            sorted_vids = sorted(cache['videos'])
+            submission.append(f"{cache_id} {' '.join(map(str, sorted_vids))}")
+
+    # Save to output file
+    output_filename = f"output_{os.path.splitext(input_path)[0]}.txt"
+    with open(output_filename, "w") as out_file:
+        out_file.write(f"{len(submission)}\n")
+        for line in submission:
+            out_file.write(f"{line}\n")
+
+    # Calculate and print score
+    score = calculate_score(requests, endpoints, cache_servers, video_sizes)
+    print(f"File: {input_path} | Score: {score} | Output: {output_filename}")
+        
     # Validate solution
     is_valid = validate_solution(cache_servers, video_sizes, X, V)
     print("Validation Successful." if is_valid else "Validation Failed.")
@@ -143,22 +154,10 @@ def main():
     if not is_valid:
         return
 
-    # Calculate and print score
-    score = calculate_score(cache_servers, endpoints, requests)
-    print(f"Final Score: {score}")
-
-    # Generate and write submission to output.txt
-    with open(output_path, "w") as f:
-        lines = []
-        for cache_id, cache in enumerate(cache_servers):
-            if cache['videos']:
-                sorted_vids = sorted(cache['videos'])
-                line = f"{cache_id} {' '.join(map(str, sorted_vids))}"
-                lines.append(line)
-        f.write(f"{len(lines)}\n")
-        f.write("\n".join(lines))
-
-
+def main():
+    for filename in os.listdir("."):
+        if filename.endswith(".in"):
+            process_file(filename)
 
 
 if __name__ == "__main__":
