@@ -1,24 +1,9 @@
 import os
-"""
-Problem Approach:
-Basic Greedy Caching with First-Fit Strategy
-
-Key Characteristics:
-1. Greedy Heuristic:
-   - Processes videos in original order (0 → V-1)
-   - Places each video in first cache with sufficient space
-   - Never revisits previous placement decisions
-
-2. Validation Focus:
-   - Ensures cache capacity constraints (X=100MB)
-   - Validates output format requirements
-   - Checks for duplicate video placements (bonus safety)
-"""
 
 def validate_solution(cache_servers, video_sizes, X, V):
     valid = True
     print("\nRunning validation checks...")
-    
+
     # Check 1: Video sizes and cache capacity constraints
     if any(v < 0 for v in video_sizes):
         print("Validation Error: Negative video size found.")
@@ -72,6 +57,9 @@ def validate_solution(cache_servers, video_sizes, X, V):
 
     if valid:
         print("Validation Successful: All constraints satisfied")
+    else:
+        print("Validation Failed: One or more validation errors found.")
+    
     return valid
 
 def calculate_score(requests, endpoints, cache_servers, video_sizes):
@@ -149,10 +137,10 @@ def process_file(input_path):
         
     # Validate solution
     is_valid = validate_solution(cache_servers, video_sizes, X, V)
-    print("Validation Successful." if is_valid else "Validation Failed.")
-
-    if not is_valid:
-        return
+    if is_valid:
+        print("Validation Successful.")
+    else:
+        print("Validation Failed. See error messages above.")
 
 def main():
     for filename in os.listdir("."):
