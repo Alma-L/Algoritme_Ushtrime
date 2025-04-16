@@ -1,3 +1,18 @@
+"""
+Problem Approach:
+Basic Greedy Caching with First-Fit Strategy
+
+Key Characteristics:
+1. Greedy Heuristic:
+   - Processes videos in original order (0 → V-1)
+   - Places each video in first cache with sufficient space
+   - Never revisits previous placement decisions
+
+2. Validation Focus:
+   - Ensures cache capacity constraints (X=100MB)
+   - Validates output format requirements
+   - Checks for duplicate video placements (bonus safety)
+"""
 import os
 
 def validate_solution(cache_servers, video_sizes, X, V):
