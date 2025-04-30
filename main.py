@@ -99,7 +99,7 @@ def calculate_score(requests, endpoints, cache_servers, video_sizes):
 
     return (total_saved_time * 1000) // total_requests
 
-def process_file(input_path):
+def process_file(input_path, input_filename):
     with open(input_path, "r") as f:
         V, E, R, C, X = map(int, f.readline().split())
         video_sizes = list(map(int, f.readline().split()))
@@ -139,8 +139,8 @@ def process_file(input_path):
             sorted_vids = sorted(cache['videos'])
             submission.append(f"{cache_id} {' '.join(map(str, sorted_vids))}")
 
-    # Save to output file
-    output_filename = f"output_{os.path.splitext(input_path)[0]}.txt"
+    os.makedirs("output", exist_ok=True)
+    output_filename = f"output/output_{os.path.splitext(input_filename)[0]}.txt"
     with open(output_filename, "w") as out_file:
         out_file.write(f"{len(submission)}\n")
         for line in submission:
@@ -158,9 +158,11 @@ def process_file(input_path):
         print("Validation Failed. See error messages above.")
 
 def main():
-    for filename in os.listdir("."):
+    input_dir = "input"
+    for filename in os.listdir(input_dir):
         if filename.endswith(".in"):
-            process_file(filename)
+            full_path = os.path.join(input_dir, filename)
+            process_file(full_path, filename)
 
 
 if __name__ == "__main__":
