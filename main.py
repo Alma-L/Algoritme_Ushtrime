@@ -199,6 +199,16 @@ def process_file(input_path, input_filename):
     enhanced_caches = enhanced_cache_placement(requests, endpoints, video_sizes, C, X)
     enhanced_score = calculate_score(requests, endpoints, enhanced_caches, video_sizes)
     
+    # Operator: Largest video first strategy
+    cache_servers2 = [{'videos': set(), 'remaining_capacity': X} for _ in range(C)]
+    sorted_videos2 = sorted(range(V), key=lambda v: -video_sizes[v])
+    for vid in sorted_videos2:
+        for cache_id in range(C):
+            if video_sizes[vid] <= cache_servers2[cache_id]['remaining_capacity']:
+                cache_servers2[cache_id]['videos'].add(vid)
+                cache_servers2[cache_id]['remaining_capacity'] -= video_sizes[vid]
+                break
+
     # Generate output with enhanced solution
     output_lines = []
     for cache_id, cache in enumerate(enhanced_caches):
@@ -219,6 +229,14 @@ def process_file(input_path, input_filename):
     improvement_pct = (improvement / basic_score * 100) if basic_score != 0 else float('inf')
     print(f"  Improvement:           {improvement:>+10,} ({improvement_pct:+.2f}%)")
     
+    print("--------------------------")
+    score2 = calculate_score(requests, endpoints, cache_servers2, video_sizes)
+    output_filename = f"output/output_largest_first_{os.path.splitext(input_filename)[0]}.txt"
+    with open(output_filename, 'w') as f:
+        f.write(f"{len(output_lines)}\n")
+        f.write("\n".join(output_lines) + "\n")
+    print(f"Score (largest first): {score2} | Output saved to: {output_filename}")
+
     # Validate enhanced solution
     print("\nSolution Validation:")
     validate_solution(enhanced_caches, video_sizes, X, V)
