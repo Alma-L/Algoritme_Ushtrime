@@ -128,7 +128,7 @@ def operator_2(cache_servers, requests, endpoints, video_sizes, video_request_co
 
     return new_cache_servers
 
-def iterated_local_search(requests, endpoints, video_sizes, video_request_counts, X, C, max_iterations=5):
+def iterated_local_search(requests, endpoints, video_sizes, video_request_counts, X, C, max_iterations=10):
     current_solution = operator_1(None, video_sizes, video_request_counts, X, C)
     best_score = calculate_score(requests, endpoints, current_solution, video_sizes)
 
