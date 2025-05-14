@@ -169,7 +169,7 @@ def enhanced_cache_placement(requests, endpoints, video_sizes, C, X):
     
     return cache_servers
 
-def iterative_local_search(initial_solution, requests, endpoints, video_sizes, C, X, max_iterations=100):
+def iterative_local_search(initial_solution, requests, endpoints, video_sizes, C, X, max_iterations=10):
     """Improve solution through iterative local search"""
     current_solution = copy.deepcopy(initial_solution)
     best_solution = copy.deepcopy(initial_solution)
