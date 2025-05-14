@@ -169,7 +169,28 @@ def enhanced_cache_placement(requests, endpoints, video_sizes, C, X):
     
     return cache_servers
 
-
+def iterative_local_search(initial_solution, requests, endpoints, video_sizes, C, X, max_iterations=100):
+    """Improve solution through iterative local search"""
+    current_solution = copy.deepcopy(initial_solution)
+    best_solution = copy.deepcopy(initial_solution)
+    best_score = calculate_score(requests, endpoints, best_solution, video_sizes)
+    
+    for iteration in range(max_iterations):
+        # Perturbation: Randomly modify the current solution
+        perturbed_solution = perturb_solution(current_solution, video_sizes, C, X)
+        
+        # Local Search: Try to improve the perturbed solution
+        improved_solution = local_search(perturbed_solution, requests, endpoints, video_sizes, C, X)
+        current_score = calculate_score(requests, endpoints, improved_solution, video_sizes)
+        
+        # Acceptance Criterion: Keep if better or with some probability
+        if current_score > best_score or random.random() < 0.1:  # 10% chance to accept worse solutions
+            best_solution = copy.deepcopy(improved_solution)
+            best_score = current_score
+        
+        current_solution = improved_solution
+    
+    return best_solution
 
 def perturb_solution(solution, video_sizes, C, X, num_changes=3):
     """Randomly modify the solution to escape local optima"""
@@ -193,6 +214,25 @@ def perturb_solution(solution, video_sizes, C, X, num_changes=3):
                 break
     
     return new_solution
+
+def local_search(solution, requests, endpoints, video_sizes, C, X, max_no_improvement=10):
+    best_solution = copy.deepcopy(solution)
+    best_score = calculate_score(requests, endpoints, best_solution, video_sizes)
+    no_improvement = 0
+    
+    while no_improvement < max_no_improvement:
+        # Generate neighbor by swapping videos between caches
+        neighbor = generate_neighbor(best_solution, video_sizes, C, X)
+        neighbor_score = calculate_score(requests, endpoints, neighbor, video_sizes)
+        
+        if neighbor_score > best_score:
+            best_solution = neighbor
+            best_score = neighbor_score
+            no_improvement = 0
+        else:
+            no_improvement += 1
+    
+    return best_solution
 
 def generate_neighbor(solution, video_sizes, C, X):
     """Generate a neighbor solution by swapping videos"""
