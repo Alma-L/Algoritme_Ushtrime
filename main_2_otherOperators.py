@@ -1,5 +1,7 @@
 import os
+import random
 from collections import defaultdict
+import copy
 
 def validate_solution(cache_servers, video_sizes, X, V):
     valid = True
@@ -54,7 +56,7 @@ def validate_solution(cache_servers, video_sizes, X, V):
         print("Validation Successful: All constraints satisfied")
     else:
         print("Validation Failed: One or more validation errors found.")
-    
+
     return valid
 
 def calculate_score(requests, endpoints, cache_servers, video_sizes):
@@ -79,55 +81,34 @@ def calculate_score(requests, endpoints, cache_servers, video_sizes):
 
     return (total_saved_time * 1000) // total_requests
 
-def process_file(input_path, input_filename):
-    with open(input_path, "r") as f:
-        V, E, R, C, X = map(int, f.readline().split())
-        video_sizes = list(map(int, f.readline().split()))
-
-        endpoints = []
-        for _ in range(E):
-            datacenter_latency, num_caches = map(int, f.readline().split())
-            cache_latencies = {}
-            for _ in range(num_caches):
-                cache_id, latency = map(int, f.readline().split())
-                cache_latencies[cache_id] = latency
-            endpoints.append({
-                'data_center_latency': datacenter_latency,
-                'cache_latencies': cache_latencies
-            })
-
-        requests = []
-        video_request_counts = defaultdict(int)
-        for _ in range(R):
-            vid, endpoint_id, num_requests = map(int, f.readline().split())
-            requests.append((vid, endpoint_id, num_requests))
-            video_request_counts[vid] += num_requests
-
-    # Initialize caches
-    cache_servers = [{'videos': set(), 'remaining_capacity': X} for _ in range(C)]
-
-    # --- Operator 1: Sort Videos by Impact Score (Requests per MB) ---  impact = total_requests / video_size
-    sorted_videos_operator_1 = sorted(
-        range(V),
+def operator_1(cache_servers, video_sizes, video_request_counts, X, C):
+    sorted_videos = sorted(
+        range(len(video_sizes)),
         key=lambda v: video_request_counts[v] / video_sizes[v] if video_sizes[v] > 0 else 0,
         reverse=True
     )
 
-    for vid in sorted_videos_operator_1:
+    new_cache_servers = [{'videos': set(), 'remaining_capacity': X} for _ in range(C)]
+
+    for vid in sorted_videos:
         for cache_id in range(C):
-            if video_sizes[vid] <= cache_servers[cache_id]['remaining_capacity']:
-                cache_servers[cache_id]['videos'].add(vid)
-                cache_servers[cache_id]['remaining_capacity'] -= video_sizes[vid]
+            if video_sizes[vid] <= new_cache_servers[cache_id]['remaining_capacity']:
+                new_cache_servers[cache_id]['videos'].add(vid)
+                new_cache_servers[cache_id]['remaining_capacity'] -= video_sizes[vid]
                 break
 
-    score_operator_1 = calculate_score(requests, endpoints, cache_servers, video_sizes)
-    print(f"File: {input_path} | Score with Operator 1 (Video Sorted by Impact): {score_operator_1}")
+    return new_cache_servers
 
-    # Reset cache servers for Operator 2
-    cache_servers = [{'videos': set(), 'remaining_capacity': X} for _ in range(C)]
+def operator_2(cache_servers, requests, endpoints, video_sizes, video_request_counts, X, C):
+    sorted_videos = sorted(
+        range(len(video_sizes)),
+        key=lambda v: video_request_counts[v] / video_sizes[v] if video_sizes[v] > 0 else 0,
+        reverse=True
+    )
 
-    # --- Operator 2: Best-fit Cache Selection based on Latency Savings ---  Place the video in the cache connected to endpoints with the most requests and best latencies.
-    for vid in sorted_videos_operator_1:  # reuse the sorted videos for consistency
+    new_cache_servers = [{'videos': set(), 'remaining_capacity': X} for _ in range(C)]
+
+    for vid in sorted_videos:
         cache_weights = defaultdict(int)
         for vid_r, ep_id, reqs in requests:
             if vid_r != vid:
@@ -140,35 +121,73 @@ def process_file(input_path, input_filename):
 
         sorted_caches = sorted(cache_weights.items(), key=lambda x: -x[1])
         for cache_id, _ in sorted_caches:
-            if video_sizes[vid] <= cache_servers[cache_id]['remaining_capacity']:
-                cache_servers[cache_id]['videos'].add(vid)
-                cache_servers[cache_id]['remaining_capacity'] -= video_sizes[vid]
+            if video_sizes[vid] <= new_cache_servers[cache_id]['remaining_capacity']:
+                new_cache_servers[cache_id]['videos'].add(vid)
+                new_cache_servers[cache_id]['remaining_capacity'] -= video_sizes[vid]
                 break
 
-    score_operator_2 = calculate_score(requests, endpoints, cache_servers, video_sizes)
-    print(f"File: {input_path} | Score with Operator 2 (Best-fit Cache Selection by Latency): {score_operator_2}")
+    return new_cache_servers
+
+def iterated_local_search(requests, endpoints, video_sizes, video_request_counts, X, C, max_iterations=5):
+    current_solution = operator_1(None, video_sizes, video_request_counts, X, C)
+    best_score = calculate_score(requests, endpoints, current_solution, video_sizes)
+
+    for _ in range(max_iterations):
+        candidate = operator_2(None, requests, endpoints, video_sizes, video_request_counts, X, C)
+        candidate_score = calculate_score(requests, endpoints, candidate, video_sizes)
+
+        if candidate_score > best_score:
+            current_solution = candidate
+            best_score = candidate_score
+
+    return current_solution, best_score
+
+def process_file(input_path, input_filename):
+    with open(input_path, "r") as f:
+        V, E, R, C, X = map(int, f.readline().split())
+        video_sizes = list(map(int, f.readline().split()))
+
+        endpoints = []
+        for _ in range(E):
+            datacenter_latency, num_caches = map(int, f.readline().split())
+            cache_latencies = {}
+            for _ in range(num_caches):
+                line = f.readline().split()
+                cache_latencies[int(line[0])] = int(line[1])
+            endpoints.append({
+                'data_center_latency': datacenter_latency,
+                'cache_latencies': cache_latencies
+            })
+
+        requests = []
+        video_request_counts = defaultdict(int)
+        for _ in range(R):
+            vid, endpoint_id, num_requests = map(int, f.readline().split())
+            requests.append((vid, endpoint_id, num_requests))
+            video_request_counts[vid] += num_requests
+
+    best_cache_servers, best_score = iterated_local_search(requests, endpoints, video_sizes, video_request_counts, X, C)
+
+    print(f"File: {input_path} | Best Score from ILS: {best_score}")
 
     output_lines = []
-    for cache_id, cache in enumerate(cache_servers):
+    for cache_id, cache in enumerate(best_cache_servers):
         if cache['videos']:
             line = f"{cache_id} {' '.join(map(str, sorted(cache['videos'])))}"
             output_lines.append(line)
 
-    # Save to output file
     os.makedirs("output", exist_ok=True)
-    output_filename = f"output/output_latency_based{os.path.splitext(input_filename)[0]}.txt"
+    output_filename = f"output/output_ils_{os.path.splitext(input_filename)[0]}.txt"
     with open(output_filename, 'w') as f:
         f.write(f"{len(output_lines)}\n")
         f.write("\n".join(output_lines) + "\n")
 
-    # Validate solution
-    is_valid = validate_solution(cache_servers, video_sizes, X, V)
+    is_valid = validate_solution(best_cache_servers, video_sizes, X, V)
     if is_valid:
         print(f"File: {input_path} | Validation Successful.")
     else:
-        print(f"File: {input_path} | Validation Failed. See error messages above.")
+        print(f"File: {input_path} | Validation Failed.")
 
-# Main function to iterate over files
 def main():
     input_folder = "input"
     if not os.path.exists(input_folder):
